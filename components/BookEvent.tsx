@@ -1,30 +1,38 @@
 'use client';
 
 import {useState} from "react";
-// import {createBooking} from "@/lib/actions/booking.actions";
-import posthog from "posthog-js";
+import {createBooking} from "@/lib/actions/booking.actions";
 
 const BookEvent = ({ eventId, slug }: { eventId: string, slug: string;}) => {
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
+        setLoading(true);
 
-        // const { success } = await createBooking({ eventId, slug, email });
-    //     if(success) {
-    //         setSubmitted(true);
-    //         posthog.capture('event_booked', { eventId, slug, email })
-    //     } else {
-    //         console.error('Booking creation failed')
-    //         posthog.captureException('Booking creation failed')
-    //     }
+        try {
+            const result = await createBooking({ eventId, slug, email });
+
+            if (result.success) {
+                setSubmitted(true);
+            } else {
+                setError(result.error || 'Booking failed. Please try again.');
+            }
+        } catch {
+            setError('Something went wrong. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
         <div id="book-event">
             {submitted ? (
-                <p className="text-sm">Thank you for signing up!</p>
+                <p className="text-sm">🎉 Thank you for signing up! Check your email for confirmation.</p>
             ): (
                 <form onSubmit={handleSubmit}>
                     <div>
@@ -35,10 +43,15 @@ const BookEvent = ({ eventId, slug }: { eventId: string, slug: string;}) => {
                             onChange={(e) => setEmail(e.target.value)}
                             id="email"
                             placeholder="Enter your email address"
+                            required
                         />
                     </div>
 
-                    <button type="submit" className="button-submit">Submit</button>
+                    {error && <p className="text-sm" style={{ color: '#ef4444', marginTop: '0.5rem' }}>{error}</p>}
+
+                    <button type="submit" className="button-submit" disabled={loading}>
+                        {loading ? 'Booking...' : 'Submit'}
+                    </button>
                 </form>
             )}
         </div>
